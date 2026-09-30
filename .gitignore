@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+
+# LaTeX build artefacts (the PDFs themselves are committed)
+docs/*.aux
+docs/*.log
+docs/*.out
+docs/*.toc
+docs/*.synctex.gz
+
+# Regenerable data. Trajectory dumps and animations are large and every script
+# that needs them rebuilds them from a seed:
+#   scripts/01_fields_and_diffusion.py --animate   -> the mp4s
+#   scripts/02_sweeps.py                           -> outputs/data/traj_*.npz
+# Result tables (csv/json) and figures (png) ARE committed -- they are the output.
+*.npz
+*.mp4
+
+# The amortised CNN's rolling checkpoint; the selected weights
+# (models/amortised_cnn_2d.pt) are committed.
+models/*_last.pt
+
+# Local trajectory cache, if DFI_TRAJ_CACHE points inside the tree
+.cache/
