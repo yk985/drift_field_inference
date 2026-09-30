@@ -451,12 +451,38 @@ edge-selection variance of the previous table, which the prediction omits.
 \clearpage
 \section{Notes on the handwritten sheet}
 
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.94\textwidth]{figs/handwritten_derivation.jpg}
-\caption{The draft under discussion. Left column: the variance of the cell mean.
-Right column: the bin-width bias.}
-\end{figure}
+The draft is a two-column sheet: the variance of the cell mean on the left, the bin-width
+bias on the right. Transcribed, with the notation as written:
+
+\begin{center}
+\small
+\begin{tabular}{@{}L{0.49\textwidth}L{0.45\textwidth}@{}}
+\toprule
+\textbf{left column \textemdash{} the variance} & \textbf{right column \textemdash{} the bias} \\
+\midrule
+$\big\langle(\hat b-b)^{2}\big\rangle
+ = \Big(\big\langle\tfrac{\dx}{\dt}\big\rangle-\tfrac{1}{\dt}\tfrac{1}{N}\sum_i\dx_i\Big)^{2}$
+&
+$b(x)=\tfrac{1}{\dt}\,\E[\dx\,|\,x]$ \\[0.35em]
+$=\big\langle \big(\tfrac{\dx}{\dt}\big)^{2}
+  -\tfrac{2}{\dt N}\langle\dx\rangle\textstyle\sum_i\dx_i
+  +\tfrac{1}{\dt^{2}N^{2}}\big(\sum\dx\big)^{2}\big\rangle$
+&
+$b_h(x)=\tfrac{1}{\dt}\,\E\big[\dx\,\big|\,x\in[x_0-\tfrac h2,\,x_0+\tfrac h2]\big]$ \\[0.35em]
+$=-\tfrac{1}{\dt^{2}}\langle\dx\rangle^{2}
+  +\tfrac{1}{\dt^{2}N^{2}}\big(N\langle\dx^{2}\rangle+2N\langle\dx\rangle^{2}\big)$
+&
+$b(x)=b(x_0+h)=b(x_0)+J_b\,\vec h$ \\[0.35em]
+$=\big(\tfrac{2}{N\dt^{2}}-\tfrac{1}{\dt^{2}}\big)\langle\dx\rangle^{2}
+  +\tfrac{1}{\dt^{2}N}\langle\dx^{2}\rangle$
+&
+$b(x)-\hat b = b(x)-\dfrac{\sum_i\dx_i(x+h)}{N\dt}$ \\[0.35em]
+with $\langle\dx^{2}\rangle=\langle\dx\rangle^{2}+2D+\sigma^{2}$, giving
+$\;\ldots+\tfrac{2D}{\dt^{2}N}+\tfrac{\sigma^{2}}{\dt^{2}N}$
+& \\
+\bottomrule
+\end{tabular}
+\end{center}
 
 \textbf{What is right.} The structure is the right structure: variance of a sample mean
 on the left, a Taylor expansion of $b$ across the cell on the right. The conditional-mean
