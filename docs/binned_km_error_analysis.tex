@@ -303,10 +303,12 @@ sum telescopes: over a contiguous visit, $\sum(\varepsilon_{j+1}-\varepsilon_j)
 
 The cell is chosen with $\tilde x$, so the estimator \emph{selects on} $\varepsilon_k$
 \textemdash{} and $-\varepsilon_k$ sits inside the increment it then averages. If the
-density is locally flat the selection is symmetric and nothing happens; with a density
-gradient,
+density is locally flat the selection is symmetric and nothing happens. With a density
+gradient, a particle measured at $x$ more likely truly sits on the denser side, so the
+error $\varepsilon_k=\tilde x_k-x_k$ tends to point towards lower density (Tweedie's
+formula, small $\sigma$):
 \begin{equation}
-  \E\big[\varepsilon_k \,\big|\, \tilde x_k = x\big] \;\simeq\; \sigma^{2}\nabla\log\rho(x) ,
+  \E\big[\varepsilon_k \,\big|\, \tilde x_k = x\big] \;\simeq\; -\sigma^{2}\nabla\log\rho(x) ,
 \end{equation}
 so that, using $-\varepsilon_k/\dt$ and the equilibrium identity $\nabla\log\rho = b/D$,
 \begin{equation}\boxed{
