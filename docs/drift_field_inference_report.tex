@@ -80,29 +80,33 @@
 \begin{center}
 {\LARGE\bfseries\color{ink} Recovering drift fields from random walks}\\[0.3em]
 {\large\color{accent} Six estimators, one set of walkers, and where each one wins}\\[0.8em]
-{\color{ink3}\small The \code{dfi} package \quad\textbullet\quad 46 tests (45 pass, 1 skips) \quad\textbullet\quad
-every number reproduced by a numbered script}
+{\large Youssef Kabbaj}\\[0.3em]
+{\color{ink3}\small October 2026 \quad\textbullet\quad code: \code{github.com/yk985/drift\_field\_inference}}
 \end{center}
 
 \vspace{0.2em}\hrule height 0.4pt \vspace{0.8em}
 
 \begin{keybox}
-\textbf{The question.} Particles move by $\mathrm dx = b(x)\,\mathrm dt+\sqrt{2D}\,\mathrm dW$.
-From their observed motion, recover the vector field $b$. Over one recorded step the random
-displacement is about 30 times the drift displacement (about 1000 times in power), so every
-method is an exercise in averaging away a much larger random term without averaging away
-the field.
+\textbf{Abstract.} We study the inverse problem of recovering the drift field $b$ of the
+overdamped Langevin dynamics $\mathrm dx = b(x)\,\mathrm dt+\sqrt{2D}\,\mathrm dW$ from observed
+particle motion. Over one recorded step the diffusive displacement is about 30 times the drift
+displacement (about 1000 times in power), so every estimator must average away a much larger
+random term without averaging away the field. We compare six estimators of increasing
+structure \textemdash{} binning, kernel regression, basis projection, neural networks fitted
+to one dataset, a network amortised over many simulated fields, and score-based methods that
+use static positions only \textemdash{} on identical simulated walkers, so that differences
+reflect the methods rather than the data.
 
-\textbf{What was built.} A simulator, six estimators of increasing structure, and one
-measurement protocol that runs all of them on the \emph{same} walkers, so that differences
-are differences between methods and not between experiments.
-
-\textbf{Three results.} (i) A network trained across many simulated fields beats every
-classical estimator by roughly 25\textendash40\% \textemdash{} and loses to the simplest kernel on
-fields from a generator it never saw. (ii) At equilibrium, \emph{static positions} carry more
-about the drift than the increments do, decisively so in 5D. (iii) Static positions are
-\emph{exactly} blind to circulation: adding a rotating component to the drift leaves every
-snapshot-based estimate unchanged to the last bit.
+We find that (i) the amortised network outperforms every classical estimator by roughly
+25\textendash40\%, but loses to the simplest kernel on fields from generators it was not
+trained on: its advantage is a learned prior. (ii) \emph{At equilibrium}, static positions
+carry more information about the drift than the increments do. Each increment is dominated by
+the diffusion term, of size $\sqrt{2D/\dt}$, whereas a position sample is free of it and, when
+detailed balance holds, encodes the drift exactly through $b = D\nabla\log\rho_{\mathrm{ss}}$.
+Denoising score matching on positions is the best per-dataset method in 2D and the only one
+that recovers a 5D field. (iii) Away from equilibrium this advantage is lost on the rotational
+part: static positions are \emph{exactly} blind to circulation, and every snapshot-based estimate
+is unchanged to the last bit when a rotating component is added to the drift.
 \end{keybox}
 
 % ==========================================================================
@@ -128,11 +132,11 @@ increments over disjoint time intervals are independent and Gaussian, with
 The noise term $\sqrt{2D}\,\mathrm dW$ therefore has zero mean and variance $2D\,\mathrm dt$
 per component; for $b=0$ this is free diffusion with mean squared displacement $2dDt$.
 Its standard deviation grows like $\sqrt{\mathrm dt}$, much faster than the drift's
-$\mathrm dt$ for small $\mathrm dt$ \textemdash{} which is the whole difficulty below.
+$\mathrm dt$ for small $\mathrm dt$; this is the central difficulty of the problem.
 
-The inverse problem, recovering $b$ from observed motion, appears in single-particle
-tracking, active matter, ecology, and anywhere a stochastic differential equation is fitted
-to a trajectory. Two kinds of data support two fundamentally different answers.
+The inverse problem, recovering $b$ from observed motion, arises in single-particle
+tracking, active matter, ecology, and wherever a stochastic differential equation is fitted
+to trajectories. We consider two kinds of data, which support fundamentally different answers.
 
 \subsection{Trajectories: the drift is a conditional mean}
 
@@ -153,8 +157,8 @@ sample of the field at the point the step started from:
 \end{equation}
 Estimating $b$ is therefore a regression of $y$ on $x$. The noise $\eta$ grows as $\dt$
 shrinks: in the 2D settings used here ($D=0.3$, $\dt\approx10^{-3}$, RMS$|b|\approx1$) its
-magnitude is 32 times the drift's. The six estimators differ only in how they pool
-neighbouring samples to beat it down.
+magnitude is 32 times that of the drift. The six estimators differ only in how they pool
+neighbouring samples to reduce it.
 
 \subsection{Snapshots: what the stationary density can and cannot tell}
 
@@ -179,7 +183,7 @@ Only when the current vanishes \textemdash{} \emph{detailed balance}, i.e.\ ther
 equilibrium \textemdash{} is $b = D\nabla\log\rss$ a pure gradient, fully determined by
 positions alone.
 
-\textbf{The fields used here make this exact.} Every drift is built as
+\textbf{The fields used in this work make this exact.} We build every drift as
 \begin{equation}
   b = -\nabla U + \omega\, A\nabla U ,
   \qquad A^\top = -A ,
@@ -209,22 +213,23 @@ great deal of it.}
 \begin{warnbox}
 \textbf{The identifiability gap is a property of the data, not of the estimators.} From
 snapshots, only the gradient part of $b$ is recoverable, whatever the method; from
-trajectories, all of $b$ is. The comparisons below are read with this limitation in mind.
+trajectories, all of $b$ is. We interpret all comparisons below with this limitation in mind.
 \end{warnbox}
 
 % ==========================================================================
 \section{Setup and measurement protocol}
 
 \textbf{Fields.} $U$ is a Gaussian random field on the torus $[-1,1]^d$ with a tunable
-correlation length, and $b$ is built from it by \eqref{eq:field}, so $\omega$ dials
-circulation without touching $\rss$. Six other generators (sparse wells, cellular band-pass
+correlation length, and $b$ is built from it by \eqref{eq:field}, so that $\omega$ controls the
+circulation without changing $\rss$. Six other generators (sparse wells, cellular band-pass
 patterns, Perlin noise, power-law spectra, terraces, an egg-carton lattice) are used only to
 test generalisation.
 
-\textbf{Simulation.} Euler\textendash Maruyama with sub-stepping: the integrator runs at
-$\dt/\text{substeps}$ while positions are recorded at $\dt$, so that an $O(\dt)$ bias in an
-estimator is not confused with an $O(\dt)$ error of the integrator. Trajectories are cached
-by configuration, so every estimator sees bit-identical walkers.
+\textbf{Simulation.} We integrate \eqref{eq:sde} with the Euler\textendash Maruyama scheme
+and sub-stepping: the integrator runs at $\dt/\text{substeps}$ while positions are recorded at
+$\dt$, so that an $O(\dt)$ bias of an estimator is not confused with an $O(\dt)$ error of the
+integrator. Trajectories are cached by configuration, so every estimator is applied to
+bit-identical walkers.
 
 \begin{figure}[h]
 \centering
@@ -236,22 +241,22 @@ circulation on the right is recoverable from the increments and, by \eqref{eq:sp
 absent from the positions.}
 \end{figure}
 
-\textbf{Error metric.} Every estimate is scored against the true field at $n=20\,000$
-points $x_j$ drawn from $\rss$ \textemdash{} where the walkers actually go, and so where the
-estimate will be used:
+\textbf{Error metric.} We score every estimate against the true field at $n=20\,000$
+points $x_j$ drawn from $\rss$, i.e.\ where the walkers actually go and hence where the
+estimate is used:
 \begin{equation}
   \mathrm{nrmse}
   \;=\; \left(\frac{\sum_j |\hat b(x_j) - b(x_j)|^2}{\sum_j |b(x_j)|^2}\right)^{1/2} .
   \label{eq:nrmse}
 \end{equation}
-It is 0 for a perfect estimate and exactly 1 for the trivial estimate $\hat b\equiv0$, so
-$0.10$ means ``wrong by 10\% of the field's typical magnitude'', and anything near 1 means
-the method has learned essentially nothing. Lower is better.
+It is 0 for a perfect estimate and exactly 1 for the trivial estimate $\hat b\equiv0$; a
+value of $0.10$ corresponds to an error of 10\% of the typical field magnitude, and values
+near 1 indicate that essentially nothing has been learned.
 
-\textbf{Tuning.} Every method chooses its own smoothing (bin size, bandwidth, basis size,
-training length) by cross-validation grouped \emph{by walker}, never by sample. Splitting
-increments at random lets a held-out point sit one time step away from its training
-neighbours, and the criterion then rewards a smoothing scale far too small (§\ref{sec:selftuning}).
+\textbf{Tuning.} Each method selects its own smoothing parameter (bin size, bandwidth, basis
+size, training length) by cross-validation grouped \emph{by walker} rather than by sample.
+With a random split, a held-out point lies one time step away from its training neighbours,
+and the criterion then favours a smoothing scale that is far too small (§\ref{sec:selftuning}).
 
 % ==========================================================================
 \section{Six estimators, from simplest to most structured}
@@ -275,7 +280,7 @@ neighbours, and the criterion then rewards a smoothing scale far too small (§\r
 \subsection{Methods 1\textendash4: least squares on the increments}
 
 All four trajectory estimators minimise the same squared loss over different classes of
-functions. That loss is not an arbitrary choice; three properties make it the right one.
+functions. We motivate this choice by three properties.
 
 \begin{enumerate}[leftmargin=1.4em,itemsep=0.15em]
 \item \textbf{It targets $b$ without seeing $b$.} Since $\E[\eta\,|\,x]=0$, for any candidate
@@ -290,10 +295,11 @@ functions. That loss is not an arbitrary choice; three properties make it the ri
 \item \textbf{It is maximum likelihood.} The Euler transition density is Gaussian,
       $p(x_{k+1}|x_k)\propto\exp\!\big(-|\dx_k-b(x_k)\dt|^2/4D\dt\big)$, so the
       log-likelihood of a trajectory is $-\frac{\dt}{4D}\sum_k|y_k-b(x_k)|^2+\text{const}$.
-\item \textbf{It has a readable training curve.} Because the noise term in \eqref{eq:decomp}
-      is about 1000 times the signal, the raw loss barely moves. The \emph{gain over predicting
-      zero}, $L(0)-L(f) = \E|b|^2-\E|b-f|^2 = (1-\mathrm{nrmse}^2)\,\E|b|^2$, isolates the
-      part that does.
+\item \textbf{It yields an interpretable training curve.} Because the noise term in
+      \eqref{eq:decomp} is about 1000 times the signal, the raw loss barely changes during
+      training. We therefore monitor the \emph{gain over predicting zero},
+      $L(0)-L(f) = \E|b|^2-\E|b-f|^2 = (1-\mathrm{nrmse}^2)\,\E|b|^2$, which isolates the part
+      of the loss that depends on the estimate.
 \end{enumerate}
 
 \begin{lossbox}{Losses of methods 1\textendash4 (data $\{(x_i,y_i)\}_{i=1}^n$, $y_i=\dx_i/\dt$)}
@@ -320,16 +326,16 @@ of training steps \textemdash{} is chosen by the same squared loss on held-out w
 \end{lossbox}
 
 Binning returns one value for the whole cell; the local-linear kernel removes the
-first-order bias this carries; SFI (stochastic force inference) projects onto a global
+first-order bias this introduces; SFI (stochastic force inference) projects onto a global
 Fourier basis, which is exactly the right basis for these fields. The networks are an MLP
-with periodic input features, or a CNN that outputs the field on a grid; for the CNN the
-loss over millions of increments reduces exactly to a few lattice statistics, so it is
-trained full-batch with no sampling noise.
+with periodic input features, or a CNN that outputs the field on a grid. For the CNN, the
+loss over millions of increments reduces exactly to a few lattice statistics, which allows
+full-batch training without sampling noise.
 
 \subsection{Method 4b: an amortised network, trained across fields}
 
-The per-dataset network must be refitted for every new dataset. The amortised one is trained
-\emph{once} on simulated data and then only applied.
+The per-dataset network must be refitted for every new dataset. The amortised network is
+instead trained \emph{once} on simulated data and then only applied.
 
 \textbf{Training data.} 3000 fields drawn from the generator with randomised parameters
 (correlation length 0.3\textendash0.7; $\omega=0$ for half, otherwise in $[-1.5,1.5]$; $D$
@@ -342,8 +348,8 @@ $\sigma^2=2D/\dt$, which is estimated from the data itself: a z-score $Y/(\sigma
 shrunk mean $Y/(N+\lambda)$, and the data weight $N/(N+\lambda)$, with $\lambda=\sigma^2/\tau^2$.
 The shrunk mean is precisely the per-cell Bayesian estimate: if a cell's mean increment
 $\bar Y=Y/N\sim\mathcal N(b,\sigma^2/N)$ and the prior is $b\sim\mathcal N(0,\tau^2)$, the
-posterior mean is $Y/(N+\lambda)$. The network starts from that and learns the spatial
-coupling between cells.
+posterior mean is $Y/(N+\lambda)$. The network takes this estimate as input and learns the
+spatial coupling between cells.
 
 \begin{lossbox}{Loss of method 4b (over training fields $m$, on the $64^2$ lattice nodes $c$)}
 \vspace{-0.4em}
@@ -361,10 +367,10 @@ simulated training fields. On a new dataset the network is applied without retra
 and never sees $b$.
 \end{lossbox}
 
-\textbf{Why this loss.} The minimiser of $\E\,\|f(X)-b\|^2$ over all functions is the
+\textbf{Choice of loss.} The minimiser of $\E\,\|f(X)-b\|^2$ over all functions is the
 posterior mean $\E[b\,|\,X]$ under the training distribution: the network is trained to be
-the \emph{Bayes-optimal} estimator for fields drawn from its generator. That single fact
-explains both its advantage and its failure mode (§\ref{sec:amort}). Dividing by
+the \emph{Bayes-optimal} estimator for fields drawn from its generator. As shown in
+§\ref{sec:amort}, this property explains both its advantage and its failure mode. Dividing by
 $\sum_c w_c|b_c|^2$ makes every field count equally regardless of its amplitude; weighting
 by $\rss$ matches the evaluation metric \eqref{eq:nrmse}, with a 20\% floor so sparsely
 visited regions are not ignored. The network is a periodic U-Net with no normalisation layers
@@ -374,7 +380,7 @@ lattice applied to inputs and outputs, vector components included.
 \subsection{Method 5: the score, from static positions}
 
 By \eqref{eq:score}, at equilibrium $b = D\,s$ with $s=\nabla\log\rss$. Estimating a score
-from samples is exactly what training a diffusion model does.
+from samples is precisely the task solved when training a diffusion model.
 
 \begin{lossbox}{Losses of method 5 (data: positions $\{x_i\}$ drawn from $\rss$)}
 \vspace{-0.4em}
@@ -394,26 +400,27 @@ from samples is exactly what training a diffusion model does.
 \vspace{-1.2em}
 \end{lossbox}
 
-\textbf{Why these losses.} Denoising score matching is again least squares onto a
+\textbf{Choice of losses.} Denoising score matching is again least squares onto a
 conditional mean. For a noised point $\tilde x = x+\sigma\varepsilon$, Tweedie's formula gives
 $-\E[\varepsilon\,|\,\tilde x]/\sigma = \nabla\log\rho_\sigma(\tilde x)$, where
 $\rho_\sigma=\rss*\mathcal N(0,\sigma^2 I)$; so the minimiser of $L$ is the score of a
 slightly blurred density, and $\sigma$ plays the role of a bandwidth. The selection criterion
 $J$ (Hyv\"arinen score matching) satisfies, after an integration by parts with no boundary
 terms on the torus, $J(s)=\tfrac12\E|s-\nabla\log\rss|^2+\text{const}$: it ranks candidate
-scores by their true error using samples alone. It sets the KDE bandwidth $h$ and the noise
-level $\sigma$ at which the trained network is read out.
+scores by their true error using samples alone. We use it to select the KDE bandwidth $h$ and
+the noise level $\sigma$ at which the trained network is evaluated.
 
 % ==========================================================================
 \section{Results}
 
-\textbf{How to read Table~\ref{tab:main}.} Each entry is the nrmse \eqref{eq:nrmse}: 0 is
-perfect, 1 is what predicting $\hat b\equiv0$ scores. The first column is the reference
-configuration; each other column changes one thing, stated in the second header row, and the
-third row gives the data budget in recorded transitions. Trajectory and snapshot rows are
-different kinds of data on the same systems: the snapshot methods get independent positions
-matched in number to the transitions (capped at 500k), plus the true $D$. Bold marks the best
-method of each family in each column.
+Table~\ref{tab:main} summarises the main comparison. Each entry is the nrmse
+\eqref{eq:nrmse}: 0 is perfect and 1 is the score of $\hat b\equiv0$. The first column is
+the reference configuration; each other column changes a single parameter, given in the
+second header row, and the third row gives the data budget in recorded transitions.
+Trajectory and snapshot rows correspond to different kinds of data on the same systems: the
+snapshot methods receive independent positions, matched in number to the transitions
+(capped at 500k), together with the true $D$. Bold marks the best method of each family in
+each column.
 
 \begin{table}[t]
 \caption{Normalised error \eqref{eq:nrmse} of every method; lower is better.}
@@ -469,36 +476,36 @@ structure rather than going noisy. Every method produces this figure on the same
 
 \subsection{More structure beats more flexibility \textemdash{} until the structure is wrong}
 
-In the reference column the order is binning (0.293), kernel (0.126), network (0.100),
-Fourier basis (0.097). Each step buys accuracy by assuming more, and here the assumptions
-happen to be true: these fields \emph{are} sums of Fourier modes, so SFI's basis is not a
-convenience but a match. On fields built by other generators (sparse wells, cellular
-patterns) SFI loses that edge to the kernel, which assumes only smoothness. The per-dataset
-network sits in the middle almost everywhere and wins among the classical methods where data
-is scarcest (0.340 at 16 walkers).
+In the reference column the ranking is binning (0.293), kernel (0.126), network (0.100),
+Fourier basis (0.097). Each method gains accuracy by assuming more, and here the assumptions
+hold: these fields \emph{are} sums of Fourier modes, so the basis of SFI matches them exactly.
+On fields from other generators (sparse wells, cellular patterns) SFI loses this advantage to
+the kernel, which assumes only smoothness. The per-dataset network lies in between in almost
+every setting and is the best of the per-dataset trajectory methods when data are scarcest
+(0.340 at 16 walkers).
 
 \subsection{The amortised network: a learned prior, its gain, and its price}
 \label{sec:amort}
 
-\textbf{In distribution, it wins nearly everywhere.} On 100 held-out fields from the
-training generator, fitted at three budgets (median 64k, 256k and 1M transitions), its median
-nrmse is 0.213, 0.122 and 0.070 against 0.334, 0.192 and 0.089 for the better of SFI and the
-kernel \textemdash{} it is the better method on 99\%, 97\% and 93\% of fields. On the reference
-walkers it reaches 0.060 against SFI's 0.097, without cross-validation and in 0.6 seconds.
+\textbf{In distribution.} On 100 held-out fields from the training generator, fitted at
+three budgets (median 64k, 256k and 1M transitions), the network reaches a median nrmse of
+0.213, 0.122 and 0.070, against 0.334, 0.192 and 0.089 for the better of SFI and the kernel;
+it is the better method on 99\%, 97\% and 93\% of the fields. On the reference walkers it
+reaches 0.060 against 0.097 for SFI, without cross-validation and in 0.6 seconds.
 
-\textbf{What it learned: a filter, not a bandwidth.} To see what the network does, linearise
-it. Its output at one node $c_0$ responds to the mean increment $\bar Y_c=Y_c/N_c$ of every
-cell $c$ through the \emph{equivalent kernel}
+\textbf{What the network learns: a filter, not a bandwidth.} To characterise the learned
+estimator we linearise it. Its output at a node $c_0$ responds to the mean increment
+$\bar Y_c=Y_c/N_c$ of every cell $c$ through the \emph{equivalent kernel}
 \begin{equation}
   K_c = \frac{\partial \hat b(c_0)}{\partial \bar Y_c},
   \qquad
   \hat b(c_0) \approx \sum_c K_c\,\bar Y_c ,
 \end{equation}
-computed exactly by automatic differentiation. Two numbers summarise it: its \emph{width}
-(the RMS radius of $|K|$), and its \emph{gain} $G=\sum_c K_c$, the fraction of a uniform drift
-that passes through. A classical smoother has $G=1$ by construction (its weights sum to one)
-and adapts by changing its width: as data grow, the cross-validated kernel bandwidth roughly
-halves, from about 0.17 to 0.08. The network does the opposite:
+computed exactly by automatic differentiation. We summarise it by two numbers: its
+\emph{width} (the RMS radius of $|K|$) and its \emph{gain} $G=\sum_c K_c$, the fraction of a
+uniform drift that is transmitted. A classical smoother has $G=1$ by construction (its weights
+sum to one) and adapts by changing its width: as the data grow, the cross-validated kernel
+bandwidth roughly halves, from about 0.17 to 0.08. The network behaves in the opposite way:
 
 \begin{center}
 \small
@@ -512,25 +519,26 @@ gain $G$ & 0.60 & 0.77 & 0.92 & 0.93 & gain $G$ & 0.79 & 0.93 & 0.76 & 0.39 \\
 \end{tabular}
 \end{center}
 
-As the budget grows 64-fold its width barely moves and its gain rises from 0.60 to 0.93.
-As the noise grows it widens \emph{and} shrinks harder, down to $G=0.39$ at $D=1$.
+As the budget grows 64-fold, the width barely changes while the gain rises from 0.60 to
+0.93. As the noise grows, the kernel both widens \emph{and} shrinks more strongly, down to
+$G=0.39$ at $D=1$.
 
-\textbf{Why shrinking is the right thing to learn.} A smoother with gain 1 is unbiased but
-passes all the noise it averages; multiplying the estimate by $G<1$ adds a bias $(1-G)\,b$ and
-cuts the variance by $G^2$. When noise dominates, that trade is strongly favourable, and the
-optimal amount of shrinkage depends on how large fields typically are \textemdash{} on the
-prior. In the idealised linear-Gaussian case the Bayes-optimal estimator is the Wiener filter,
+\textbf{Why shrinkage is optimal.} A smoother with unit gain is unbiased but transmits all
+the noise it averages; multiplying the estimate by $G<1$ introduces a bias $(1-G)\,b$ and
+reduces the variance by a factor $G^2$. When noise dominates, this trade-off is strongly
+favourable, and the optimal amount of shrinkage depends on the typical magnitude of the
+fields, that is, on the prior. In the idealised linear-Gaussian case the Bayes-optimal estimator is the Wiener filter,
 which acts on each Fourier mode $k$ of the data separately,
 \begin{equation}
   \hat b(k) \;=\; \frac{S(k)}{S(k)+\mathcal N(k)}\;\bar Y(k),
 \end{equation}
 with $S$ the power spectrum of the field prior and $\mathcal N\propto\sigma^2/n$ the noise
-power per mode. More data lowers $\mathcal N$ and pushes the factor towards 1 \textemdash{} the
-gain rises; more noise raises it and suppresses the high-$k$ modes first \textemdash{} the
-filter widens and shrinks. The network is not linear, and not exactly this filter, but it
-shows its signature. Its kernels are also elongated with negative side lobes: the $x$-component
-of a gradient field is correlated further along $y$ than along $x$, and the network learned
-that anisotropic covariance, which no isotropic bandwidth can represent.
+power per mode. More data lowers $\mathcal N$ and pushes the factor towards 1, so the gain
+rises; more noise raises $\mathcal N$ and suppresses the high-$k$ modes first, so the filter
+widens and shrinks. The network is neither linear nor exactly this filter, but it exhibits the
+same signature. Its kernels are moreover elongated with negative side lobes: the
+$x$-component of a gradient field is correlated further along $y$ than along $x$, and the
+network has learned this anisotropic covariance, which no isotropic bandwidth can represent.
 
 \begin{figure}[h]
 \centering
@@ -541,10 +549,11 @@ walkers. Dashed circles: twice the bandwidth that cross-validation picks for the
 local-linear kernel on the same data. Right: width against budget and against noise for both.}
 \end{figure}
 
-\textbf{The price: a prior can be wrong.} Everything above hinges on the training generator
-being a good model of the field. When it is not, the bias $(1-G)\,b$ that was cheap becomes
-the dominant error, because the network shrinks the features its prior considers unlikely.
-On six generators it never saw (eight fields each, 1M transitions, same amplitude):
+\textbf{The cost of a prior.} The above relies on the training generator being a good model
+of the field. When it is not, the bias $(1-G)\,b$, previously cheap, becomes the dominant
+error, because the network shrinks the features that its prior considers unlikely. We test
+this on six generators not seen during training (eight fields each, 1M transitions, same
+amplitude):
 
 \begin{center}
 \small
@@ -560,31 +569,43 @@ amortised CNN & \textbf{0.151} & 0.702 & 0.726 & 0.803 & 0.721 & 0.683 \\
 \end{tabular}
 \end{center}
 
-It wins only on the egg carton, a smooth single-scale field that resembles a long-correlation
-training field. It is worst exactly where the classical methods do well. A band-pass field
-concentrates its power on a ring of wavenumbers that the Gaussian prior considers improbable
-at that amplitude, so those modes are damped. Sparse wells \textemdash{} a plain of zero drift
-broken by narrow wells with drift up to $4\times$ the RMS \textemdash{} are treated as noise:
-smoothed away and pulled back towards the amplitudes the network knows. Shifting a parameter
-beyond the training range shows the same rule: a rotation $\omega=3$ (trained $|\omega|\le1.5$)
-costs $3.3\times$, a drift twice as strong $2.2\times$, near-noise-free data ($D=0.02$)
-$3.5\times$; but rougher fields, smoother fields and much noisier data, which the prior does
-not forbid, are survived or still won. SFI and the kernel have no training distribution to
-leave; their errors move only with the difficulty of the problem.
+The network wins only on the egg carton, a smooth single-scale field that resembles a
+long-correlation training field, and it performs worst precisely where the classical methods
+do well. A band-pass field concentrates its power on a ring of wavenumbers that the Gaussian
+prior considers improbable at that amplitude, so these modes are damped. Sparse wells
+\textemdash{} a plain of zero drift broken by narrow wells with drift up to $4\times$ the RMS
+\textemdash{} are treated as noise: smoothed away and pulled back towards familiar amplitudes.
+Shifting a single parameter beyond the training range follows the same rule: a rotation
+$\omega=3$ (trained on $|\omega|\le1.5$) costs a factor $3.3$, a drift twice as strong $2.2$,
+near-noise-free data ($D=0.02$) $3.5$; rougher fields, smoother fields and much noisier data,
+which the prior does not exclude, are handled as well as or better than by the classical
+methods. SFI and the kernel have no training distribution to depart from; their errors
+change only with the difficulty of the problem.
 
 \begin{keybox}
-The amortised network is better because it knows what the answer should look like, and it
-degrades exactly as far as that knowledge is wrong. Use it where the training generator is a
-credible model of the system; otherwise train it on a broader mix of generators.
+The amortised network outperforms the classical estimators because it encodes what the
+answer should look like, and it degrades exactly as far as this knowledge is wrong. It is
+therefore appropriate only when the training generator is a credible model of the system;
+otherwise it should be trained on a broader mixture of generators.
 \end{keybox}
 
 \subsection{At equilibrium, static positions beat increments, increasingly with dimension}
 
-On a gradient field ($\omega=0$), denoising score matching on 500k independent snapshots
-reaches 0.072 in 2D, where the best per-dataset trajectory method on 4.8M increments gets
-0.097. Using the walkers' own (time-correlated) positions instead of idealised snapshots, it
-still beats every per-dataset trajectory method at 16 and 64 walkers (0.302 and 0.164,
-against 0.340 and 0.173 for the best of them). The advantage grows with dimension:
+\textbf{The role of the diffusion term.} An increment and a position carry the drift in very
+different ways. An increment measures $b$ directly, but through \eqref{eq:km}: every sample
+is buried under the diffusion term $\eta$, of standard deviation $\sqrt{2D/\dt}$, which is
+32 times the drift here and grows without bound as the sampling interval shrinks. A static
+position carries no such term. \emph{At equilibrium}, i.e.\ when detailed balance holds and
+$J_{\mathrm{ss}}=0$, the stationary density encodes the drift exactly through
+$b=D\nabla\log\rss$ \eqref{eq:split}, so the same physical information can be read from where
+the particles are rather than from how they move, without paying the diffusive noise of each
+step. The comparison below is restricted to gradient fields ($\omega=0$) for this reason.
+
+On such a field, denoising score matching on 500k independent snapshots reaches 0.072 in 2D,
+where the best per-dataset trajectory method on 4.8M increments reaches 0.097. Using the
+walkers' own (time-correlated) positions instead of idealised snapshots, it still outperforms
+every per-dataset trajectory method at 16 and 64 walkers (0.302 and 0.164, against 0.340 and
+0.173 for the best of them). The advantage grows with dimension:
 
 \begin{center}
 \small
@@ -600,9 +621,9 @@ MLP & 0.093 & 0.223 & 0.927 & 1.019 & & & & & \\
 \end{tabular}
 \end{center}
 
-At $d=5$ every trajectory method sits near 0.93, barely better than predicting zero, while
-denoising score matching reaches 0.625 \textemdash{} from twelve times fewer samples. Three
-things explain it.
+At $d=5$ every trajectory method remains near 0.93, barely better than predicting zero,
+whereas denoising score matching reaches 0.625 from twelve times fewer samples. We identify
+three reasons.
 
 \textbf{Increments lose information as $d$ grows; positions do not.} Information about $b$
 accumulates with observed \emph{time}, not with the number of steps: the variance of a local
@@ -612,25 +633,25 @@ stay small against the field's length scale): $\dt=1.05\times10^{-3}$ in 2D but
 $2.7\times10^{-4}$ in 5D. The same 6.1M transitions therefore cover four times less time,
 and the per-step noise grows from 32 to 109 times the drift. Meanwhile the field has
 ${\sim}1700$ independent correlation volumes in 5D. The 1600 time units of data leave about
-one unit per volume, a standard deviation $\sqrt{2D}\approx0.8$ per component against a
-signal of 0.44: below one in signal-to-noise everywhere, which is why every trajectory
-method retreats towards zero. Not capacity \textemdash{} the same MLP fits the exact 5D drift
-to 0.04 given noiseless targets \textemdash{} but information.
+one unit per volume, i.e.\ a standard deviation $\sqrt{2D}\approx0.8$ per component against a
+signal of 0.44: the signal-to-noise ratio is below one everywhere, and every trajectory
+method shrinks towards zero. The limitation is one of information rather than capacity: the
+same MLP fits the exact 5D drift to 0.04 when given noiseless targets.
 
 \textbf{A snapshot is a full, independent sample.} Each position is a draw from $\rss$, whose
-log-gradient \emph{is} the drift (divided by $D$); its information does not depend on $\dt$
-at all. 500k snapshots give ${\sim}300$ independent samples per correlation volume, and the
-noise in the score regression is the noise level $\sigma$ the method chooses, not the
+log-gradient \emph{is} the drift divided by $D$; its information does not depend on $\dt$.
+500k snapshots provide ${\sim}300$ independent samples per correlation volume, and the noise
+in the score regression is the level $\sigma$ chosen by the method, not the diffusive noise
 $\sqrt{2D/\dt}$ imposed by the physics.
 
 \textbf{A shared model, not a local average.} The KDE score is a fixed-bandwidth local average
-whose gradient variance grows like $h^{-(d+2)}$ \textemdash{} the same curse as binning, and it
-fails in 5D (0.983). Denoising score matching fits one neural network across the whole
-space, pooling statistical strength between regions. At $d=10$, 500k snapshots are no longer
-enough for either.
+whose gradient variance grows like $h^{-(d+2)}$, the same curse of dimensionality as binning,
+and it fails in 5D (0.983). Denoising score matching fits one neural network across the whole
+space and shares statistical strength between regions. At $d=10$, 500k snapshots are no
+longer sufficient for either.
 
-This advantage lives entirely on the equilibrium side of \eqref{eq:split}: it requires
-$J_{\mathrm{ss}}=0$, and it disappears with the circulation, as the next section shows.
+We stress that this advantage holds only at equilibrium: it relies on $J_{\mathrm{ss}}=0$ in
+\eqref{eq:split}, and it disappears for the rotational part of the drift, as shown next.
 
 \subsection{Snapshots are blind to circulation, exactly}
 
@@ -646,24 +667,24 @@ rotational part their error is 1.00 everywhere \textemdash{} they return no rota
 As \eqref{eq:split} predicts, both snapshot estimators return \emph{bit-identical}
 predictions for $\omega=0,\dots,4$ (largest difference across the five values: exactly 0.0).
 Their error against the rotational component is 1.00 at every $\omega$, and against the full
-drift it climbs as $\omega/\sqrt{1+\omega^2}$, the fraction of $|b|$ that is rotational.
-Trajectory methods instead \emph{improve} with $\omega$: a stronger rotation is more signal
-against the same noise. The amortised network tracks $\omega$ up to 2 and fails at 4,
+drift it increases as $\omega/\sqrt{1+\omega^2}$, the fraction of $|b|$ that is rotational.
+Trajectory methods instead \emph{improve} with $\omega$, since a stronger rotation means more
+signal against the same noise. The amortised network tracks $\omega$ up to 2 and fails at 4,
 outside its training range.
 
 \subsection{Position measurement error: a bias for trajectories, almost nothing for snapshots}
 
-In experiments positions are measured with error \textemdash{} for instance the localisation
-error of a microscope. Model it as $\tilde x_k = x_k+\varepsilon_k$ with independent
-$\varepsilon_k\sim\mathcal N(0,\sigma^2 I)$. The two families react completely differently.
+In experiments, positions are measured with error, for instance the localisation error of a
+microscope. We model it as $\tilde x_k = x_k+\varepsilon_k$ with independent
+$\varepsilon_k\sim\mathcal N(0,\sigma^2 I)$. The two families respond very differently.
 
 \textbf{Trajectories.} The measured increment is
-$\Delta\tilde x_k = \dx_k + \varepsilon_{k+1} - \varepsilon_k$. This adds variance $2\sigma^2$,
-which averages out like any other noise. It also adds a \emph{bias}, which does not. Every
-trajectory method groups increments by their measured starting point $\tilde x_k$, and the
-same $\varepsilon_k$ that displaced that measurement enters the increment with the opposite
-sign. Suppose $\rss$ increases to the right. A particle measured at $\tilde x$ is more likely
-to truly sit to its right, where there are more particles, so the error
+$\Delta\tilde x_k = \dx_k + \varepsilon_{k+1} - \varepsilon_k$. This adds a variance
+$2\sigma^2$, which averages out like any other noise, but also a \emph{bias}, which does not.
+Every trajectory method groups increments by their measured starting point $\tilde x_k$, and
+the same $\varepsilon_k$ that displaced this measurement enters the increment with the
+opposite sign. Suppose that $\rss$ increases to the right. A particle measured at $\tilde x$
+is then more likely to lie to its right, where there are more particles, so the error
 $\varepsilon_k=\tilde x_k-x_k$ tends to point left; precisely, for small $\sigma$ (Tweedie's
 formula),
 \begin{equation}
@@ -676,11 +697,11 @@ The increment carries $-\varepsilon_k$, which therefore points right, towards hi
   \;\approx\; b + \frac{\sigma^2}{\dt}\,\nabla\log\rss
   \;=\; b\,\Big(1+\frac{\sigma^2}{D\dt}\Big).
 \end{equation}
-Every trajectory method then estimates a field that is too large by this factor, however much
-data it has. The ratio compares the measurement error $\sigma$ with the size of one diffusive
-step $\sqrt{2D\dt}\approx0.025$: at $\sigma=0.02$, one percent of the box, they are
-comparable, and the estimate is $2.3\times$ too large. Recording less often (larger $\dt$)
-helps; more data does not.
+Every trajectory method therefore estimates a field that is too large by this factor,
+regardless of the amount of data. The ratio compares the measurement error $\sigma$ with the
+size of one diffusive step, $\sqrt{2D\dt}\approx0.025$: at $\sigma=0.02$, one percent of the
+box, the two are comparable and the estimate is $2.3$ times too large. Recording less often
+(larger $\dt$) reduces the bias; more data does not.
 
 \textbf{Snapshots.} Noisy positions are exact samples of the blurred density
 $\rss*\mathcal N(0,\sigma^2I)$, whose score differs from the true one by a relative amount of
@@ -707,28 +728,29 @@ denoising score matching & 0.077 & 0.077 & 0.078 & 0.080 \\
 \end{center}
 {\footnotesize\color{ink2} nrmse, 256 walkers $\times$ 4000 steps, $D=0.3$, mean of 3 seeds.}
 
-The trajectory errors track the predicted inflation: an estimate $2.3\times$ too large has an
-nrmse of at least 1.3 from the bias alone, and the classical methods land between 1.25 and
-1.56. The amortised network suffers less only by accident: its amplitude prior pulls the
-inflated estimate back towards field magnitudes it has seen. The snapshot methods barely
-move. The full derivation, verified against simulation term by term, is in the companion note
-\code{docs/binned\_km\_error\_analysis.pdf}.
+The trajectory errors follow the predicted inflation: an estimate $2.3$ times too large has an
+nrmse of at least 1.3 from the bias alone, and the classical methods lie between 1.25 and
+1.56. The amortised network is less affected, but only incidentally: its amplitude prior
+pulls the inflated estimate back towards familiar field magnitudes. The snapshot methods are
+essentially unaffected. The full derivation, verified term by term against simulation, is
+given in the companion note \code{docs/binned\_km\_error\_analysis.pdf}.
 
-\subsection{Every method that tunes itself can be fooled by its own criterion}
+\subsection{Self-tuning methods can be misled by their own criterion}
 \label{sec:selftuning}
 
-Four instances, each caught only by comparing against the truth. Cross-validation chose a
-$10^6$-cell grid that answered for 10\% of the box (binning). Early stopping quit 30\% early on
-a flat held-out curve (MLP). The KDE bandwidth search ran to the bottom of its grid on
-temporally correlated positions (1.06 against 0.35 at a fixed bandwidth), because it split
-samples at random rather than by walker; and to the \emph{top} at $D=1$, where the density is
-nearly flat and the criterion has almost no signal \textemdash{} the 0.843 in the table. Every
-method therefore reports what it chose, not only what it scored.
+We observed four such failures, each detectable only by comparison with the true field.
+Cross-validation selected a $10^6$-cell grid that answered for 10\% of the box (binning).
+Early stopping ended training 30\% too early on a flat held-out curve (MLP). The KDE bandwidth
+search ran to the bottom of its grid on temporally correlated positions (1.06 against 0.35 at
+a fixed bandwidth), because it split samples at random rather than by walker, and to the
+\emph{top} of its grid at $D=1$, where the density is nearly flat and the criterion carries
+almost no signal (the 0.843 in Table~\ref{tab:main}). For this reason we report the selected
+hyperparameters alongside every score.
 
 % ==========================================================================
 \section{The error budget, in closed form}
 
-For binning the whole error decomposes analytically, and each term was verified against
+For binning, the error decomposes analytically, and we verified each term against
 simulation. For a cell of width $h$ holding $n$ increments,
 \begin{equation}
   \mathrm{MSE} \;\simeq\; \underbrace{\frac{2D}{n\dt}}_{\text{variance}}
@@ -736,21 +758,21 @@ simulation. For a cell of width $h$ holding $n$ increments,
   \;+\;\underbrace{b^2\Big(\frac{\sigma_{\mathrm{obs}}^2}{D\dt}\Big)^{\!2}}_{\text{bias: position error}},
   \qquad n \simeq M\rss h^d ,
 \end{equation}
-with $M$ the total number of transitions. Substituting $n$ gives three facts that govern
-every trajectory method:
+with $M$ the total number of transitions. Substituting $n$ yields three properties shared by
+all trajectory methods:
 \begin{itemize}[leftmargin=1.2em,itemsep=0.1em]
 \item $\mathrm{Var}=2D/(M\rss h^d\dt)=2D/T_{\mathrm{occ}}$ depends only on the \emph{time}
-      spent in the cell. Sampling faster makes each $\dx/\dt$ noisier and gives
-      proportionally more of them: $\dt$ cancels.
+      spent in the cell: sampling faster makes each $\dx/\dt$ noisier but provides
+      proportionally more of them, so $\dt$ cancels.
 \item Balancing variance against bias gives $h^\star\propto M^{-1/(d+2)}$ and
-      $\mathrm{MSE}^\star\propto M^{-2/(d+2)}$: to halve the error at $d=6$ takes $16\times$ the
-      data. This is the basic reason to go beyond binning.
-\item The position-error term keeps its $1/\dt$, so with imperfect measurements sampling
-      faster is actively harmful.
+      $\mathrm{MSE}^\star\propto M^{-2/(d+2)}$: halving the error at $d=6$ requires $16$ times
+      more data. This motivates the more structured estimators.
+\item The measurement-error term retains its $1/\dt$, so with imperfect measurements faster
+      sampling is harmful.
 \end{itemize}
-Against 64 independent simulated replicas: the variance law holds to within
+Over 64 independent simulated replicas, the variance law holds to within
 1\textendash9\% at every cell width and local density, the predicted optimal bin count is 17.0
-against a measured 16, and the inflation factor is confirmed to 1.5\%.
+against a measured 16, and the inflation factor is confirmed to within 1.5\%.
 
 % ==========================================================================
 \section{Limitations}
@@ -763,39 +785,50 @@ against a measured 16, and the inflation factor is confirmed to 1.5\%.
 \item \textbf{$D$ is known} to the snapshot methods, and $\dt$ is set by the simulator's
       stability rule rather than by an experiment.
 \item \textbf{The snapshot estimators receive positions without walker labels}, so their
-      cross-validation cannot group by walker. That is a real defect when positions are
+      cross-validation cannot group by walker, which is a genuine weakness when positions are
       correlated in time.
 \item \textbf{The amortised network is 2D-only}, and its $64^2$ output grid caps its accuracy
       on nearly noise-free data.
 \end{itemize}
 
 % ==========================================================================
-\section{What is worth doing next}
+\section{Outlook}
 
 \begin{enumerate}[leftmargin=1.4em,itemsep=0.12em]
-\item \textbf{A hybrid estimator}: the gradient part from positions, the rotational remainder
-      from increments. With few walkers it should beat both families.
-\item \textbf{Estimate $D$ from the data} (quadratic variation) in the snapshot methods and
-      report how the drift scale degrades.
-\item \textbf{Train the amortised network on a mixture of generators} and repeat the test
-      above; how much in-family accuracy it trades for robustness is the interesting number.
+\item \textbf{Time-dependent fields.} All fields studied here are stationary. A drift
+      $b(x,t)$ that changes in time removes the stationary density altogether, so the snapshot
+      methods lose their foundation and the trajectory methods must pool increments over
+      finite time windows, trading temporal resolution against noise. Characterising this
+      trade-off, and extending the amortised network to space\textendash time inputs, is the
+      most natural next step.
+\item \textbf{Other models.} The architectures used here are deliberately simple. Score
+      networks parameterised as the gradient of a scalar ($s=-\nabla\phi$) would enforce the
+      curl-free structure of equilibrium drifts; equivariant or attention-based networks
+      operating directly on trajectories, rather than on binned statistics, would remove the
+      $64^2$ grid and the restriction to 2D; and conditioning on $D$ would allow a single
+      amortised model to cover a wider range of noise levels.
+\item \textbf{A hybrid estimator}: the gradient part from positions and the rotational
+      remainder from increments, which should outperform both families with few walkers.
+\item \textbf{Estimating $D$ from the data} (quadratic variation) in the snapshot methods,
+      and quantifying how the drift scale degrades.
+\item \textbf{Training the amortised network on a mixture of generators}, to measure how much
+      in-family accuracy is traded for robustness.
 \item \textbf{A calibrated posterior}: a conditional diffusion model over drift fields giving
       a distribution rather than a point estimate, with coverage checked against the truth.
-\item \textbf{A time-resolution sweep}, where the error budget predicts the $O(\dt)$
-      discretisation bias trading against the $1/\dt$ measurement-error amplification.
-\item \textbf{Real data} \textemdash{} single-particle tracking or an ecological time series:
-      unknown $D$, non-stationary boundaries, heterogeneous noise.
+\item \textbf{Real data}, such as single-particle tracking or ecological time series, with
+      unknown $D$, non-stationary boundaries and heterogeneous noise.
 \end{enumerate}
 
 % ==========================================================================
-\section{Reproducing this}
+\section{Reproducibility}
 
-Every figure and table comes from a numbered script: \code{01} (fields and trajectories),
+The code is available at \code{github.com/yk985/drift\_field\_inference}. Every figure and
+table is produced by a numbered script: \code{01} (fields and trajectories),
 \code{03} (the six shared figures for every method), \code{04} (kernel against binning),
 \code{05}\textendash\code{07} (amortised network: data, training, study), \code{08} (snapshot
-methods and identifiability), \code{09} (the error budget); \code{python -m pytest tests/} runs
-the 46 tests. Result tables are cached by configuration in \code{outputs/*/data/}, so a re-run
-redraws the figures without recomputing anything. Per-method detail is in the
+methods and identifiability), \code{09} (the error budget); \code{python -m pytest tests/}
+runs the test suite. Result tables are cached by configuration in \code{outputs/*/data/}, so
+that a re-run redraws the figures without recomputation. Per-method details are given in the
 \code{README.md} of each folder under \code{outputs/}, the cross-method comparison in
 \code{outputs/SUMMARY.md}, and the framework reference and the analytical note in
 \code{docs/}.
